@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recovery Jeopardy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#0a1fc4;
+    --blue-hi:#2a3df0;
+    --gold:#ffd23c;
+    --ink:#02052b;
+    --head:"Anton","Impact","Haettenschweiler","Arial Narrow Bold",sans-serif;
+    --serif:"Libre Baskerville","Korinna","Georgia",serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;overflow:hidden;}
+  body{
+    background:#000;
+    color:#fff;
+    font-family:var(--head);
+    display:flex;flex-direction:column;
+    padding:1.2vh 1vw;
+    gap:1vh;
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    height:5vh;flex:none;
+  }
+  .topbar h1{
+    margin:0;font-weight:400;font-size:4vh;letter-spacing:.15vh;
+    color:var(--gold);text-shadow:.2vh .2vh 0 #000;text-transform:uppercase;
+  }
+  .tools button{
+    font-family:var(--head);font-size:2.2vh;letter-spacing:.1vh;
+    background:#111a6b;color:var(--gold);border:.2vh solid var(--gold);
+    border-radius:.6vh;padding:.5vh 1.2vh;margin-left:.8vh;cursor:pointer;
+    text-transform:uppercase;
+  }
+  .tools button:hover{background:var(--blue-hi);}
+
+  .board{
+    flex:1;min-height:0;
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:1.15fr repeat(5,1fr);
+    gap:.8vh .6vw;
+  }
+  .category,.clue{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    background:var(--blue);
+    border:.35vh solid #000;
+    box-shadow:inset 0 0 0 .25vh rgba(255,255,255,.12);
+    text-transform:uppercase;
+    min-width:0;min-height:0;
+  }
+  .category{
+    color:#fff;
+    font-size:min(2.9vw,4.8vh);
+    line-height:1.05;
+    padding:0 .8vw;
+    text-shadow:.25vh .25vh 0 #000;
+    letter-spacing:.05vh;
+  }
+  .clue{
+    color:var(--gold);
+    font-size:min(6vw,10vh);
+    text-shadow:.35vh .35vh 0 #000;
+    cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .clue:hover{background:var(--blue-hi);transform:scale(1.02);}
+  .clue.used{background:#050838;box-shadow:none;cursor:default;}
+  .clue.used:hover{transform:none;}
+
+  .scorebar{
+    flex:none;display:flex;justify-content:center;gap:2vw;height:7vh;
+  }
+  .scorebar.hidden{display:none;}
+  .team{
+    display:flex;align-items:center;gap:1.2vw;
+    background:#0b1070;border:.3vh solid var(--gold);border-radius:.8vh;
+    padding:0 1.2vw;
+  }
+  .team-name{font-size:2.6vh;color:var(--gold);text-transform:uppercase;letter-spacing:.1vh;}
+  .team-score{font-size:4.6vh;min-width:9vh;text-align:center;}
+  .team button{
+    font-family:var(--head);font-size:2.4vh;background:var(--blue);color:#fff;
+    border:.2vh solid var(--gold);border-radius:.5vh;padding:.3vh 1vh;cursor:pointer;
+  }
+  .team button:hover{background:var(--blue-hi);}
+
+  /* full-screen clue */
+  .overlay{
+    display:none;position:fixed;inset:0;z-index:100;
+    background:var(--blue);
+    background:radial-gradient(ellipse at center,#1230ff 0%,#0a1fc4 55%,#050c7a 100%);
+    flex-direction:column;
+    padding:3vh 5vw 3vh;
+  }
+  .overlay.active{display:flex;}
+  .modal-cat{
+    flex:none;text-align:center;color:var(--gold);text-transform:uppercase;
+    font-size:min(3vw,5vh);letter-spacing:.2vh;
+    text-shadow:.25vh .25vh 0 #000;
+  }
+  .modal-main{
+    flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4vh;text-align:center;
+  }
+  .modal-clue{
+    width:100%;max-height:52vh;
+    font-family:var(--serif);font-weight:700;text-transform:uppercase;
+    line-height:1.25;color:#fff;
+    text-shadow:.4vh .4vh 0 #000;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .modal-answer{
+    width:100%;min-height:20vh;max-height:30vh;
+    font-family:var(--head);text-transform:uppercase;color:var(--gold);
+    line-height:1.15;letter-spacing:.1vh;text-shadow:.35vh .35vh 0 #000;
+    display:flex;align-items:center;justify-content:center;
+    visibility:hidden;
+  }
+  .modal-answer.show{visibility:visible;}
+  .modal-foot{
+    flex:none;display:flex;justify-content:center;align-items:center;gap:2vw;
+  }
+  .modal-foot button{
+    font-family:var(--head);font-size:3.2vh;text-transform:uppercase;letter-spacing:.15vh;
+    background:var(--gold);color:var(--ink);border:none;border-radius:.8vh;
+    padding:1.2vh 3vw;cursor:pointer;
+  }
+  .modal-foot button:hover{background:#fff;}
+  .hint{color:rgba(255,255,255,.55);font-size:2vh;letter-spacing:.1vh;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Recovery Jeopardy</h1>
+  <div class="tools">
+    <button onclick="toggleScores()">Scores</button>
+    <button onclick="toggleFS()">Full Screen</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+</div>
+
+<div class="board" id="board"></div>
+<div class="scorebar hidden" id="scoreboard"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal-cat" id="modalCat"></div>
+  <div class="modal-main">
+    <div class="modal-clue" id="modalClue"></div>
+    <div class="modal-answer" id="modalAnswer"></div>
+  </div>
+  <div class="modal-foot">
+    <button id="modalBtn" onclick="advance()">Reveal Answer</button>
+    <span class="hint">Space / Enter = next &nbsp;·&nbsp; Esc = back to board</span>
+  </div>
+</div>
+
+<script>
+const categories = [
+  {
+    name: "Support System",
+    clues: [
+      {value:100, clue:"Generally abbreviated to DDA.", answer:"What is Dual Diagnosis Anonymous?"},
+      {value:200, clue:"What groups at Fora are used to establish a habit of attending meetings outside of Fora.", answer:"What are AA, NA, Dharma, SMART, Criminon, H&I, Knuckleheads, and IronTribe?"},
+      {value:300, clue:"How to get dietary needs covered.", answer:"What is talk to your AC about a referral for our nutritionist?"},
+      {value:400, clue:"Available through a referral from your AC, this can support your family and friends, and participation can lead to longer outings in Phase 3.", answer:"What is Support Persons Group (SPG)?"},
+      {value:500, clue:"Consisting of Nerissa, David, Denise, Ally, Steve, and Jen.", answer:"What is the Residential Leadership Team (RLT)?"}
+    ]
+  },
+  {
+    name: "Skills",
+    clues: [
+      {value:100, clue:"Usually represented by the acronym HALT.", answer:"What is Hungry, Angry, Lonely, Tired?"},
+      {value:200, clue:"This is the part of the program that establishes habits about being a contributing member of any community.", answer:"What are chores?"},
+      {value:300, clue:"This document lays out personal warning signs and specific coping steps ahead of time, before a high-risk moment hits.", answer:"What is a relapse prevention plan?"},
+      {value:400, clue:"A skill used to control anxiety and focus that can be used anytime, anywhere.", answer:"What is box breathing?"},
+      {value:500, clue:"The team at Fora consisting of people with lived experience who will guide you through the recovery process.", answer:"What are Certified Recovery Mentors, from the island of misfit toys?"}
+    ]
+  },
+  {
+    name: "Routine",
+    clues: [
+      {value:100, clue:"Times for receiving mail at the hub.", answer:"What is 5-7 PM?"},
+      {value:200, clue:"Number of times per week you can bring cafeteria food upstairs.", answer:"What is zero?"},
+      {value:300, clue:"A great place to release endorphins and help lower stress and cravings.", answer:"What is the gym?"},
+      {value:400, clue:"What time can you sign up for the TVs.", answer:"What is 4 PM?"},
+      {value:500, clue:"Available three times per day. You must be waiting in a chair to be in line.", answer:"What is Med Pass?"}
+    ]
+  },
+  {
+    name: "Policy and Procedures",
+    clues: [
+      {value:100, clue:"What is a Fora baby?", answer:"Something to be avoided at all cost — why we have a no touching policy."},
+      {value:200, clue:"Completely off limits to a patient on bedrest for the day.", answer:"What is television?"},
+      {value:300, clue:"A grievance will be resolved within this timeframe.", answer:"What is 3 business days?"},
+      {value:400, clue:"Spaces that are never co-ed.", answer:"What are the gym, art room, and courtyard?"},
+      {value:500, clue:"Random way to help patients learn to hold themselves accountable.", answer:"What are UAs?"}
+    ]
+  },
+  {
+    name: "Community",
+    clues: [
+      {value:100, clue:"The powerful multi-disciplinary team that supports 3.7 level of care patients.", answer:"What is the Wolfpack?"},
+      {value:200, clue:"The team of patients on Cascade and Mazama that support the needs of the floor.", answer:"What are peer leads?"},
+      {value:300, clue:"A housing organization that many people in recovery use.", answer:"What is an Oxford House?"},
+      {value:400, clue:"The first step to solving conflict between two people.", answer:"What is listen?"},
+      {value:500, clue:"A way to leave the building on Fridays to Phase 2 patients, or any Phase 3 patient.", answer:"What are outside recovery meetings?"}
+    ]
+  }
+];
+
+let usedState = {};
+let scores = {"Team 1":0,"Team 2":0};
+let current = null;
+let revealed = false;
+
+function buildBoard(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  categories.forEach(cat=>{
+    const d = document.createElement('div');
+    d.className='category'; d.textContent=cat.name;
+    board.appendChild(d);
+  });
+  for(let row=0; row<5; row++){
+    categories.forEach((cat,ci)=>{
+      const key = ci+'-'+row;
+      const d = document.createElement('div');
+      d.className = 'clue' + (usedState[key] ? ' used' : '');
+      d.textContent = usedState[key] ? '' : '$'+cat.clues[row].value;
+      d.onclick = ()=> openClue(ci,row,key);
+      board.appendChild(d);
+    });
+  }
+}
+
+function buildScoreboard(){
+  const sb = document.getElementById('scoreboard');
+  sb.innerHTML='';
+  Object.keys(scores).forEach(team=>{
+    const d = document.createElement('div');
+    d.className='team';
+    d.innerHTML = `<span class="team-name">${team}</span>
+      <button onclick="adjust('${team}',-100)">−100</button>
+      <span class="team-score" id="score-${team}">${scores[team]}</span>
+      <button onclick="adjust('${team}',100)">+100</button>`;
+    sb.appendChild(d);
+  });
+}
+function adjust(team,amt){
+  scores[team]+=amt;
+  document.getElementById('score-'+team).textContent = scores[team];
+}
+function toggleScores(){ document.getElementById('scoreboard').classList.toggle('hidden'); }
+function toggleFS(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+
+/* shrink text until it fits its box */
+function fit(el, startVh, minVh){
+  let size = startVh;
+  el.style.fontSize = size+'vh';
+  while((el.scrollHeight > el.clientHeight+1 || el.scrollWidth > el.clientWidth+1) && size > minVh){
+    size -= 0.5;
+    el.style.fontSize = size+'vh';
+  }
+}
+
+function openClue(ci,row,key){
+  if(usedState[key]) return;
+  current = {ci,row,key};
+  revealed = false;
+  const cat = categories[ci], c = cat.clues[row];
+  document.getElementById('modalCat').textContent = cat.name + ' — $' + c.value;
+  const clueEl = document.getElementById('modalClue');
+  const ansEl = document.getElementById('modalAnswer');
+  clueEl.textContent = c.clue;
+  ansEl.textContent = c.answer;
+  ansEl.classList.remove('show');
+  document.getElementById('modalBtn').textContent = 'Reveal Answer';
+  document.getElementById('overlay').classList.add('active');
+  fit(clueEl, 9, 3.5);
+  fit(ansEl, 8, 3.5);
+}
+function advance(){
+  if(!current) return;
+  if(!revealed){
+    revealed = true;
+    document.getElementById('modalAnswer').classList.add('show');
+    document.getElementById('modalBtn').textContent = 'Back to Board';
+  } else closeModal(true);
+}
+function closeModal(markUsed){
+  if(current && markUsed) usedState[current.key] = true;
+  document.getElementById('overlay').classList.remove('active');
+  current = null;
+  buildBoard();
+}
+function resetGame(){
+  usedState = {};
+  scores = {"Team 1":0,"Team 2":0};
+  buildBoard(); buildScoreboard();
+}
+document.addEventListener('keydown',e=>{
+  if(!current) return;
+  if(e.key===' '||e.key==='Enter'||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+  else if(e.key==='Escape'){ closeModal(revealed); }
+});
+window.addEventListener('resize',()=>{
+  if(current){ fit(document.getElementById('modalClue'),9,3.5); fit(document.getElementById('modalAnswer'),8,3.5); }
+});
+
+buildBoard();
+buildScoreboard();
+</script>
+</body>
+</html>

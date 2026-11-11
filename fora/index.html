@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fora Health Handbook Jeopardy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#0a1fc4;
+    --blue-hi:#2a3df0;
+    --gold:#ffd23c;
+    --ink:#02052b;
+    --head:"Anton","Impact","Haettenschweiler","Arial Narrow Bold",sans-serif;
+    --serif:"Libre Baskerville","Korinna","Georgia",serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;overflow:hidden;}
+  body{
+    background:#000;
+    color:#fff;
+    font-family:var(--head);
+    display:flex;flex-direction:column;
+    padding:1.2vh 1vw;
+    gap:1vh;
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    height:5vh;flex:none;
+  }
+  .topbar h1{
+    margin:0;font-weight:400;font-size:4vh;letter-spacing:.15vh;
+    color:var(--gold);text-shadow:.2vh .2vh 0 #000;text-transform:uppercase;
+  }
+  .tools button{
+    font-family:var(--head);font-size:2.2vh;letter-spacing:.1vh;
+    background:#111a6b;color:var(--gold);border:.2vh solid var(--gold);
+    border-radius:.6vh;padding:.5vh 1.2vh;margin-left:.8vh;cursor:pointer;
+    text-transform:uppercase;
+  }
+  .tools button:hover{background:var(--blue-hi);}
+
+  .board{
+    flex:1;min-height:0;
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:1.15fr repeat(5,1fr);
+    gap:.8vh .6vw;
+  }
+  .category,.clue{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    background:var(--blue);
+    border:.35vh solid #000;
+    box-shadow:inset 0 0 0 .25vh rgba(255,255,255,.12);
+    text-transform:uppercase;
+    min-width:0;min-height:0;
+  }
+  .category{
+    color:#fff;
+    font-size:min(2.9vw,4.8vh);
+    line-height:1.05;
+    padding:0 .8vw;
+    text-shadow:.25vh .25vh 0 #000;
+    letter-spacing:.05vh;
+  }
+  .clue{
+    color:var(--gold);
+    font-size:min(6vw,10vh);
+    text-shadow:.35vh .35vh 0 #000;
+    cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .clue:hover{background:var(--blue-hi);transform:scale(1.02);}
+  .clue.used{background:#050838;box-shadow:none;cursor:default;}
+  .clue.used:hover{transform:none;}
+
+  .scorebar{
+    flex:none;display:flex;justify-content:center;gap:2vw;height:7vh;
+  }
+  .scorebar.hidden{display:none;}
+  .team{
+    display:flex;align-items:center;gap:1.2vw;
+    background:#0b1070;border:.3vh solid var(--gold);border-radius:.8vh;
+    padding:0 1.2vw;
+  }
+  .team-name{font-size:2.6vh;color:var(--gold);text-transform:uppercase;letter-spacing:.1vh;}
+  .team-score{font-size:4.6vh;min-width:9vh;text-align:center;}
+  .team button{
+    font-family:var(--head);font-size:2.4vh;background:var(--blue);color:#fff;
+    border:.2vh solid var(--gold);border-radius:.5vh;padding:.3vh 1vh;cursor:pointer;
+  }
+  .team button:hover{background:var(--blue-hi);}
+
+  /* full-screen clue */
+  .overlay{
+    display:none;position:fixed;inset:0;z-index:100;
+    background:var(--blue);
+    background:radial-gradient(ellipse at center,#1230ff 0%,#0a1fc4 55%,#050c7a 100%);
+    flex-direction:column;
+    padding:3vh 5vw 3vh;
+  }
+  .overlay.active{display:flex;}
+  .modal-cat{
+    flex:none;text-align:center;color:var(--gold);text-transform:uppercase;
+    font-size:min(3vw,5vh);letter-spacing:.2vh;
+    text-shadow:.25vh .25vh 0 #000;
+  }
+  .modal-main{
+    flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4vh;text-align:center;
+  }
+  .modal-clue{
+    width:100%;max-height:52vh;
+    font-family:var(--serif);font-weight:700;text-transform:uppercase;
+    line-height:1.25;color:#fff;
+    text-shadow:.4vh .4vh 0 #000;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .modal-answer{
+    width:100%;min-height:20vh;max-height:30vh;
+    font-family:var(--head);text-transform:uppercase;color:var(--gold);
+    line-height:1.15;letter-spacing:.1vh;text-shadow:.35vh .35vh 0 #000;
+    display:flex;align-items:center;justify-content:center;
+    visibility:hidden;
+  }
+  .modal-answer.show{visibility:visible;}
+  .modal-foot{
+    flex:none;display:flex;justify-content:center;align-items:center;gap:2vw;
+  }
+  .modal-foot button{
+    font-family:var(--head);font-size:3.2vh;text-transform:uppercase;letter-spacing:.15vh;
+    background:var(--gold);color:var(--ink);border:none;border-radius:.8vh;
+    padding:1.2vh 3vw;cursor:pointer;
+  }
+  .modal-foot button:hover{background:#fff;}
+  .hint{color:rgba(255,255,255,.55);font-size:2vh;letter-spacing:.1vh;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Fora Health Handbook Jeopardy</h1>
+  <div class="tools">
+    <button onclick="toggleScores()">Scores</button>
+    <button onclick="toggleFS()">Full Screen</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+</div>
+
+<div class="board" id="board"></div>
+<div class="scorebar hidden" id="scoreboard"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal-cat" id="modalCat"></div>
+  <div class="modal-main">
+    <div class="modal-clue" id="modalClue"></div>
+    <div class="modal-answer" id="modalAnswer"></div>
+  </div>
+  <div class="modal-foot">
+    <button id="modalBtn" onclick="advance()">Reveal Answer</button>
+    <span class="hint">Space / Enter = next &nbsp;·&nbsp; Esc = back to board</span>
+  </div>
+</div>
+
+<script>
+const categories = [
+  {
+    name: "Program Basics",
+    clues: [
+      {value:100, clue:"This is the team that supports the patients with the 3.7 ASAM Level of Care.", answer:"What is the Wolfpack?"},
+      {value:200, clue:"This is the maximum number of adults Fora Health's Adult Residential Program can accommodate.", answer:"What is 70?"},
+      {value:300, clue:"This is part of the program that establishes habits about being a contributing part of any community.", answer:"What are chores?"},
+      {value:400, clue:"Usually abbreviated to RLT.", answer:"What is Residential Leadership Team?"},
+      {value:500, clue:"Generally abbreviated to DDA.", answer:"What is Dual Diagnosis Anonymous?"}
+    ]
+  },
+  {
+    name: "Rights & Grievances",
+    clues: [
+      {value:100, clue:"This is the maximum number of bags Fora Health has capacity to store for a patient's belongings.", answer:"What is one bag?"},
+      {value:200, clue:"This is the number of business days within which Fora Health aims to promptly resolve a grievance.", answer:"What is 3 business days?"},
+      {value:300, clue:"This is the number of calendar days Fora Health has to complete the investigation of any grievance.", answer:"What is 30 calendar days?"},
+      {value:400, clue:"This is the number of days within which you have the right to review your clinical records after a written request.", answer:"What is 5 days?"},
+      {value:500, clue:"This is the name and title of the person listed as Fora Health's Chief Clinical Officer and grievance contact.", answer:"Who is Nerissa Heller, LCSW, CADC III?"}
+    ]
+  },
+  {
+    name: "Rules & Guidelines",
+    clues: [
+      {value:100, clue:"This is 'lights out' time Sunday through Thursday.", answer:"What is 11:00 PM?"},
+      {value:200, clue:"The number of times per week you can bring cafeteria food upstairs.", answer:"What is 0?"},
+      {value:300, clue:"This is strictly prohibited between patients, and between patients and staff, at all times — including horseplay or consensual contact.", answer:"What is touching / physical contact?"},
+      {value:400, clue:"This is the maximum allowed heel or platform height on footwear.", answer:"What is 2 inches?"},
+      {value:500, clue:"At what time can patients from Mazama and Cascade share the art room or gym without staff?", answer:"What is never?"}
+    ]
+  },
+  {
+    name: "Belongings & Contraband",
+    clues: [
+      {value:100, clue:"This category of scented personal product is banned entirely, except for cocoa butter versions.", answer:"What is lotion (also: perfume/body spray)?"},
+      {value:200, clue:"This popular handheld gaming device is not allowed on its own, without its docking station.", answer:"What is a Nintendo Switch?"},
+      {value:300, clue:"This is the number of days a prohibited prescription like a Benzodiazepine will be stored before destruction if a support person doesn't pick it up.", answer:"What is 7 days?"},
+      {value:400, clue:"Along with tinctures and non-prescribed vitamins, this category of product is completely banned from the building.", answer:"What are supplements?"},
+      {value:500, clue:"This procedure is done to property that cannot be laundered that needs to come up to the floor.", answer:"What is the Hot Room — 160 degrees for 60 minutes?"}
+    ]
+  },
+  {
+    name: "Bedrest & Packages",
+    clues: [
+      {value:100, clue:"This is the time the lobby is open for residential patients to hang out.", answer:"What is after business hours, for patients who have access to the courtyard?"},
+      {value:200, clue:"This privilege is completely off-limits for any patient who is on bedrest for the day.", answer:"What is TV/television?"},
+      {value:300, clue:"This is the timeframe patients can access packages and mail deliveries.", answer:"What is 5–7 PM?"},
+      {value:400, clue:"These are the days and hours during which packages can be delivered to Fora Health.", answer:"What is Monday–Friday, 8:30 AM–5:00 PM?"},
+      {value:500, clue:"This is what happens to ALL of a bedrest patient's groups for the entire day if that patient chooses to watch TV instead.", answer:"What is they all become unexcused absences?"}
+    ]
+  }
+];
+
+let usedState = {};
+let scores = {"Team 1":0,"Team 2":0};
+let current = null;
+let revealed = false;
+
+function buildBoard(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  categories.forEach(cat=>{
+    const d = document.createElement('div');
+    d.className='category'; d.textContent=cat.name;
+    board.appendChild(d);
+  });
+  for(let row=0; row<5; row++){
+    categories.forEach((cat,ci)=>{
+      const key = ci+'-'+row;
+      const d = document.createElement('div');
+      d.className = 'clue' + (usedState[key] ? ' used' : '');
+      d.textContent = usedState[key] ? '' : '$'+cat.clues[row].value;
+      d.onclick = ()=> openClue(ci,row,key);
+      board.appendChild(d);
+    });
+  }
+}
+
+function buildScoreboard(){
+  const sb = document.getElementById('scoreboard');
+  sb.innerHTML='';
+  Object.keys(scores).forEach(team=>{
+    const d = document.createElement('div');
+    d.className='team';
+    d.innerHTML = `<span class="team-name">${team}</span>
+      <button onclick="adjust('${team}',-100)">−100</button>
+      <span class="team-score" id="score-${team}">${scores[team]}</span>
+      <button onclick="adjust('${team}',100)">+100</button>`;
+    sb.appendChild(d);
+  });
+}
+function adjust(team,amt){
+  scores[team]+=amt;
+  document.getElementById('score-'+team).textContent = scores[team];
+}
+function toggleScores(){ document.getElementById('scoreboard').classList.toggle('hidden'); }
+function toggleFS(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+
+/* shrink text until it fits its box */
+function fit(el, startVh, minVh){
+  let size = startVh;
+  el.style.fontSize = size+'vh';
+  while((el.scrollHeight > el.clientHeight+1 || el.scrollWidth > el.clientWidth+1) && size > minVh){
+    size -= 0.5;
+    el.style.fontSize = size+'vh';
+  }
+}
+
+function openClue(ci,row,key){
+  if(usedState[key]) return;
+  current = {ci,row,key};
+  revealed = false;
+  const cat = categories[ci], c = cat.clues[row];
+  document.getElementById('modalCat').textContent = cat.name + ' — $' + c.value;
+  const clueEl = document.getElementById('modalClue');
+  const ansEl = document.getElementById('modalAnswer');
+  clueEl.textContent = c.clue;
+  ansEl.textContent = c.answer;
+  ansEl.classList.remove('show');
+  document.getElementById('modalBtn').textContent = 'Reveal Answer';
+  document.getElementById('overlay').classList.add('active');
+  fit(clueEl, 9, 3.5);
+  fit(ansEl, 8, 3.5);
+}
+function advance(){
+  if(!current) return;
+  if(!revealed){
+    revealed = true;
+    document.getElementById('modalAnswer').classList.add('show');
+    document.getElementById('modalBtn').textContent = 'Back to Board';
+  } else closeModal(true);
+}
+function closeModal(markUsed){
+  if(current && markUsed) usedState[current.key] = true;
+  document.getElementById('overlay').classList.remove('active');
+  current = null;
+  buildBoard();
+}
+function resetGame(){
+  usedState = {};
+  scores = {"Team 1":0,"Team 2":0};
+  buildBoard(); buildScoreboard();
+}
+document.addEventListener('keydown',e=>{
+  if(!current) return;
+  if(e.key===' '||e.key==='Enter'||e.key==='ArrowRight'){ e.preventDefault(); advance(); }
+  else if(e.key==='Escape'){ closeModal(revealed); }
+});
+window.addEventListener('resize',()=>{
+  if(current){ fit(document.getElementById('modalClue'),9,3.5); fit(document.getElementById('modalAnswer'),8,3.5); }
+});
+
+buildBoard();
+buildScoreboard();
+</script>
+</body>
+</html>
